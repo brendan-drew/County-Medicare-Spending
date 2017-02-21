@@ -1,11 +1,9 @@
 import numpy as np
 import pandas as pd
 import pymc3 as pm
+import matplotlib.pyplot as plt
+import seaborn as sns
 import os
-
-'''
-This file is used to create a baseline hierarchical model fitting medicare actual costs per beneficiary to the linear function alpha + beta * time[in years]. Alpha and beta are assumed to be normally distributed among counties. The NUTS algorith is used to find the posterior trace. RMSE is calculated for comparison to other models.
-'''
 
 def process_data():
     '''
@@ -63,35 +61,57 @@ def specify_variables(df):
     labels = df['idx'].values
     return x, y, labels
 
-def rmse_calc(trace, features_df, lookup_df):
+def build_eval_df(trace, features_df, lookup_df, burn = 500):
     '''
     INPUT: pymc3 trace, features dataframe with county-level index and predicted spend, lookup_df with county index and fips
-    OUTPUT: RMSE calculation (float)
+    OUTPUT: Data frame for model evaluation including alpha, beta, alpha/beta confidence intervals, prediction, and residuals
     '''
     # Get the intercept and time coefficient matrices from your traces
-    alphas = trace.get_values('alpha', burn = 500)
-    betas = trace.get_values('beta', burn = 500)
-    # Define the mean intercepts and coefficients
+    alphas = trace.get_values('alpha', burn = burn)
+    betas = trace.get_values('beta', burn = burn)
+    # Define the mean intercepts and coefficients with confidence intervals
     mean_alphas = []
     mean_betas = []
-    for i, cty in enumerate(lookup_df['fips']):
+    alphas_lower_bound = []
+    alphas_upper_bound = []
+    betas_lower_bound = []
+    betas_upper_bound = []
+    for i in xrange(alphas.shape[1]):
         mean_alphas.append(np.mean(alphas[:,i]))
         mean_betas.append(np.mean(betas[:,i]))
+        alphas_lower_bound.append(np.percentile(alphas[:,i], 2.5))
+        alphas_upper_bound.append(np.percentile(alphas[:,i], 97.5))
+        betas_lower_bound.append(np.percentile(betas[:,i], 2.5))
+        betas_upper_bound.append(np.percentile(betas[:,i], 97.5))
     # Append the coefficients to the cty_lookup dataframe
-    cty_lookup['alpha'] = mean_alphas
-    cty_lookup['beta'] = mean_betas
+    lookup_df['alpha'] = mean_alphas
+    lookup_df['beta'] = mean_betas
+    lookup_df['alpha_lower_bound'] = alphas_lower_bound
+    lookup_df['alphas_upper_bound'] = alphas_upper_bound
+    lookup_df['betas_lower_bound'] = betas_lower_bound
+    lookup_df['betas_upper_bound'] = betas_upper_bound
     # Merge the cty_lookup dataframe with the features dataframe to have alpha and beta for eacy year-county combination
-    eval_df = features_df.merge(cty_lookup, how = 'left', left_on = 'idx', right_on = 'idx')
+    eval_df = features_df.merge(cty_lookup, how = 'left', on = 'idx')
     # Calculate the predicted spending based on mean alpha and beta
     eval_df['predicted'] =  eval_df['alpha'] + eval_df['beta'] * eval_df['year']
     # Find the residuals
     eval_df['residual'] = eval_df['predicted'] - eval_df['actual_per_capita_costs']
-    # Calculate the RMSE
-    rmse = np.sqrt(np.mean((eval_df['residual']**2)))
-    # Print results
+    # Return  merged dataframe
+    return eval_df
+
+def rmse_calc(residuals):
+    '''
+    INPUT: Vectors of residuals
+    OUTPUT: RMSE calculation (float)
+    '''
+    rmse = np.sqrt(np.mean(residuals**2))
     print 'Base Hierarchical Model RMSE: {}'.format(rmse)
-    # Return rmse
     return rmse
+
+def plot_ci(trace):
+    alphas = trace.get_values('alpha', burn = 500)
+    betas = trace.get_values('beta', burn = 500)
+
 
 if __name__ == '__main__':
     np.random.seed(123)
@@ -99,7 +119,8 @@ if __name__ == '__main__':
     data = process_data()
     subset = sample_data(data)
     # Get features dataframe and a lookup table of index to fips code
-    features, cty_lookup = index_counties(subset)
+    # TESTING WITH FULL DATASET
+    features, cty_lookup = index_counties(data)
     x, y, labels = specify_variables(features)
     n_counties = len(np.unique(labels))
 
@@ -114,27 +135,23 @@ if __name__ == '__main__':
         mu_b = pm.Normal('mu_beta', mu = 0, sd = 1000)
         # Hyperprior for the time coefficient standard deviation
         sigma_b = pm.Uniform('sigma_beta', lower = -1000, upper = 1000)
-
         # Intercept for each county
         a = pm.Normal('alpha', mu = mu_a, sd = sigma_a, shape = n_counties)
         # Time coefficient for each county
         b = pm.Normal('beta', mu = mu_b, sd = sigma_b, shape = n_counties)
-
         # Model error
         eps = pm.Uniform('eps', lower = 0, upper = 10000)
-
         # Model prediction of actual per capita costs
         medicare_spending = a[labels] + b[labels] * x
-
         # Data likelihood
         medicare_spending_like = pm.Normal('spending_like', mu = medicare_spending, sd = eps, observed = y)
-
     # Get the posterior traces
     with hierarchical_model:
         mu, sds, elbo = pm.variational.advi(n=100000)
         step = pm.NUTS(scaling = hierarchical_model.dict_to_array(sds)**2, is_cov = True)
         hierarchical_trace = pm.sample(5000, step, start = mu)
 
+    # Aggregate data for evaluation in Pandas Dataframe
+    eval_df = build_eval_df(hierarchical_trace, features, cty_lookup)
     # Calculate rmse
-    rmse = rmse_calc(hierarchical_trace, features, cty_lookup)
-    # Calculated RMSE of 410.38
+    rmse = rmse_calc(eval_df['residual'].values)
