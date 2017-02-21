@@ -3,6 +3,10 @@ import pandas as pd
 import pymc3 as pm
 import os
 
+'''
+This file is used to create a baseline hierarchical model fitting medicare actual costs per beneficiary to the linear function alpha + beta * time[in years]. Alpha and beta are assumed to be normally distributed among counties. The NUTS algorith is used to find the posterior trace. RMSE is calculated for comparison to other models.
+'''
+
 def process_data():
     '''
     INPUT: None
