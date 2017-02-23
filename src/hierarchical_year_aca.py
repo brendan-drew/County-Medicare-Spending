@@ -56,10 +56,10 @@ def specify_variables(df):
     INPUT: Pandas dataframe output from index_counties
     OUTPUT: X features array, y target array, labels array for use in pymc3 model
     '''
-    x = df['year'].values
+    X = df[['year', 'post_aca']].values
     y = df['actual_per_capita_costs'].values
     labels = df['idx'].values
-    return x, y, labels
+    return X, y, labels
 
 def build_eval_df(trace, features_df, lookup_df, burn = 500):
     '''
@@ -68,32 +68,42 @@ def build_eval_df(trace, features_df, lookup_df, burn = 500):
     '''
     # Get the intercept and time coefficient matrices from your traces
     alphas = trace.get_values('alpha', burn = burn)
-    betas = trace.get_values('beta', burn = burn)
+    betas_year = trace.get_values('beta_year', burn = burn)
+    betas_aca = trace.get_values('beta_aca', burn = burn)
     # Define the mean intercepts and coefficients with confidence intervals
     mean_alphas = []
-    mean_betas = []
+    mean_betas_year = []
+    mean_betas_aca = []
     alphas_lower_bound = []
     alphas_upper_bound = []
-    betas_lower_bound = []
-    betas_upper_bound = []
+    betas_year_lower_bound = []
+    betas_year_upper_bound = []
+    betas_aca_lower_bound = []
+    betas_aca_upper_bound = []
     for i in xrange(alphas.shape[1]):
         mean_alphas.append(np.mean(alphas[:,i]))
-        mean_betas.append(np.mean(betas[:,i]))
+        mean_betas_year.append(np.mean(betas_year[:,i]))
+        mean_betas_aca.append(np.mean(betas_aca[:,i]))
         alphas_lower_bound.append(np.percentile(alphas[:,i], 2.5))
         alphas_upper_bound.append(np.percentile(alphas[:,i], 97.5))
-        betas_lower_bound.append(np.percentile(betas[:,i], 2.5))
-        betas_upper_bound.append(np.percentile(betas[:,i], 97.5))
+        betas_year_lower_bound.append(np.percentile(betas_year[:,i], 2.5))
+        betas_year_upper_bound.append(np.percentile(betas_year[:,i], 97.5))
+        betas_aca_lower_bound.append(np.percentile(betas_aca[:,i], 2.5))
+        betas_aca_upper_bound.append(np.percentile(betas_aca[:,i], 97.5))
     # Append the coefficients to the cty_lookup dataframe
     lookup_df['alpha'] = mean_alphas
-    lookup_df['beta'] = mean_betas
+    lookup_df['beta_year'] = mean_betas_year
+    lookup_df['beta_aca'] = mean_betas_aca
     lookup_df['alpha_lower_bound'] = alphas_lower_bound
     lookup_df['alphas_upper_bound'] = alphas_upper_bound
-    lookup_df['betas_lower_bound'] = betas_lower_bound
-    lookup_df['betas_upper_bound'] = betas_upper_bound
+    lookup_df['betas_year_lower_bound'] = betas_year_lower_bound
+    lookup_df['betas_year_upper_bound'] = betas_year_upper_bound
+    lookup_df['betas_aca_lower_bound'] = betas_aca_lower_bound
+    lookup_df['betas_aca_upper_bound'] = betas_aca_upper_bound
     # Merge the cty_lookup dataframe with the features dataframe to have alpha and beta for eacy year-county combination
     eval_df = features_df.merge(cty_lookup, how = 'left', on = 'idx')
     # Calculate the predicted spending based on mean alpha and beta
-    eval_df['predicted'] =  eval_df['alpha'] + eval_df['beta'] * eval_df['year']
+    eval_df['predicted'] =  eval_df['alpha'] + eval_df['beta_year'] * eval_df['year'] + eval_df['beta_aca'] * eval_df['post_aca']
     # Find the residuals
     eval_df['residual'] = eval_df['predicted'] - eval_df['actual_per_capita_costs']
     # Return  merged dataframe
@@ -108,7 +118,7 @@ def rmse_calc(residuals):
     print 'Base Hierarchical Model RMSE: {}'.format(rmse)
     return rmse
 
-def plot_ci(lookup_df, sort_ = True, title = None):
+def plot_ci(lookup_df, sort_ = True):
     '''
     INPUT: Dataframe with county-level coefficients and confidence intervals
     OUTPUT: Plot of confidence intervals for unique counties
@@ -147,7 +157,7 @@ def plot_ci(lookup_df, sort_ = True, title = None):
         for i in range(sorted_by_alpha.shape[0]):
             ax1.hlines(y[i], lookup_df['alpha_lower_bound'].values[i], lookup_df['alphas_upper_bound'].values[i], color = 'b', lw = 1)
             ax2.hlines(y[i], lookup_df['betas_lower_bound'].values[i], lookup_df['betas_upper_bound'].values[i], color = 'b', lw = 1)
-    fig.suptitle(title, fontsize = 16)
+    fig.suptitle('Ranked Intercept & Coefficient Confidence Intervals', fontsize = 16)
     fig.show()
 
 
@@ -158,28 +168,40 @@ if __name__ == '__main__':
     subset = sample_data(data)
     # Get features dataframe and a lookup table of index to fips code
     features, cty_lookup = index_counties(subset)
-    x, y, labels = specify_variables(features)
+    features['post_aca'] = features['year'].apply(lambda x: 1 if x > 3 else 0)
+    X, y, labels = specify_variables(features)
     n_counties = len(np.unique(labels))
 
     # Build the hierarchical linear model
     # This approach is taken from http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/
     with pm.Model() as hierarchical_model:
+        # HYPERPRIORS
         # Hyperprior for the intercept mean
-        mu_a = pm.Normal('mu_alpha', mu = np.mean(y[np.where(x == 0)[0]]), sd = np.var(y[np.where(x == 0)[0]]))
+        mu_a = pm.Normal('mu_alpha', mu = np.mean(y[np.where(X[:,0] == 0)[0]]), sd = np.var(y[np.where(X[:,0] == 0)[0]]))
         # Hyperprior for the intercept standard deviation
         sigma_a = pm.Uniform('sigma_alpha', lower = 0, upper = 5000)
         # Hyperprior for the time coefficient
-        mu_b = pm.Normal('mu_beta', mu = 0, sd = 1000)
+        mu_b_year = pm.Normal('mu_beta_year', mu = 0, sd = 1000)
         # Hyperprior for the time coefficient standard deviation
-        sigma_b = pm.Uniform('sigma_beta', lower = 0, upper = 1000)
+        sigma_b_year = pm.Uniform('sigma_beta_year', lower = 0, upper = 1000)
+        # Hyperprior for the post-ACA coefficient
+        mu_b_aca = pm.Normal('mu_beta_aca', mu = 0, sd = 1000)
+        # Hyperprior for the post-ACA standard deviation
+        sigma_b_aca = pm.Uniform('sigma_beta_aca', lower = 0, upper = 1000)
+
+        # PRIORS
         # Intercept for each county
         a = pm.Normal('alpha', mu = mu_a, sd = sigma_a, shape = n_counties)
-        # Time coefficient for each county
-        b = pm.Normal('beta', mu = mu_b, sd = sigma_b, shape = n_counties)
+        # Year coefficient for each county
+        b_year = pm.Normal('beta_year', mu = mu_b_year, sd = sigma_b_year, shape = n_counties)
+        # Post-ACA dummy variable
+        b_aca = pm.Normal('beta_aca', mu = mu_b_aca, sd = sigma_b_aca, shape = n_counties)
         # Model error
         eps = pm.Uniform('eps', lower = 0, upper = 10000)
+
+        # BUILD LINEAR MODEL
         # Model prediction of actual per capita costs
-        medicare_spending = a[labels] + b[labels] * x
+        medicare_spending = a[labels] + b_year[labels] * X[:,0] + b_aca[labels] * X[:,1]
         # Data likelihood
         medicare_spending_like = pm.Normal('spending_like', mu = medicare_spending, sd = eps, observed = y)
     # Get the posterior traces
@@ -193,4 +215,4 @@ if __name__ == '__main__':
     # Calculate rmse
     rmse = rmse_calc(eval_df['residual'].values)
     # Plot the confidence interval
-    plot_ci(cty_lookup)
+    # plot_ci(cty_lookup)

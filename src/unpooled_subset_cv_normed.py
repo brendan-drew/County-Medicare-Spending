@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pymc3 as pm
 import os
-from base_hierarchical_model import *
+from base_hierarchical_model_cv import *
 
 '''
 This file evaluates the RMSE of an unpooled model fitting actual per capita Medicare costs to the linear function alpha + beta * time[in years]. Functions are imported from the base_hierarchical_model script.
@@ -14,20 +14,19 @@ if __name__ == '__main__':
     data = process_data()
     subset = sample_data(data)
     # Get features dataframe and a lookup table of index to fips code
-    features, cty_lookup = index_counties(subset)
-    labels = features['idx'].unique()
+    x_train, x_test, y_train, y_test, train_counties = train_test_split(subset)
+    n_counties = len(np.unique(train_counties))
+    train_labels, cty_lookup = index_counties(train_counties)
 
     # Build the unpooled linear model
     # This approach is taken from http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/
     # Store individual traces in a dictionary
     individual_traces = {}
     # Subset the data and define x and y for each county
-    for cty in labels:
-        # Subset the data for that county
-        cty_data = features.loc[features['idx'] == cty, :]
+    for cty in np.unique(train_labels):
         # Define x and y
-        x = cty_data['year'].values
-        y = cty_data['actual_per_capita_costs'].values
+        x = x_train[np.where(train_labels == cty)[0]]
+        y = np.log(y_train[np.where(train_labels == cty)[0]])
 
         # Build a linear model specific to the county
         # Intercept prior
@@ -43,7 +42,7 @@ if __name__ == '__main__':
             spending_like = pm.Normal('spending_like', mu = medicare_spending, sd = eps, observed = y)
             # Get posteriors
             step = pm.NUTS()
-            trace = pm.sample(2000, step = step)
+            trace = pm.sample(2000, step = step, progressbar = False)
         # Store the trace in the individual_traces dict
         individual_traces[cty] = trace
 
@@ -57,13 +56,22 @@ if __name__ == '__main__':
 
 
     # Merge the features df with the lookup df
-    eval_df = features.merge(cty_lookup, how = 'left', on = 'idx')
+    eval_df = subset.merge(cty_lookup, how = 'left', left_on = 'state_and_county_fips_code', right_on = 'fips')
 
     # Calculate the predicted spend
     eval_df['prediction'] = eval_df['alpha'] + eval_df['beta'] * eval_df['year']
+    eval_df['prediction'] = np.exp(eval_df['prediction'])
 
     # Calculate rmse
     eval_df['residual'] = eval_df['prediction'] - eval_df['actual_per_capita_costs']
     rmse = np.sqrt(np.mean(eval_df['residual']**2))
     print 'Unpooled Model RMSE: {}'.format(rmse)
     # Found RMSE of 399.90
+
+    # Pickle the evaluation df, lookup df, and individual traces
+    with open('pickle_files/unpooled_subset_evaluation_df_cv_normed.pkl', 'w') as f:
+        pickle.dump(eval_df, f)
+    with open('pickle_files/unpooled_subset_lookup_df_cv_normed.pkl', 'w') as f:
+        pickle.dump(cty_lookup, f)
+    with open('pickle_files/unpooled_subset_traces_cv_normed.pkl', 'w') as f:
+        pickle.dump(individual_traces, f)

@@ -33,7 +33,7 @@ def sample_data(df, size = 100):
     sample = df.loc[df['sample'] == 1, :]
     return sample
 
-def index_counties(df):
+def index_counties(train_counties):
     '''
     INPUT: Pandas dataframe with county-level features
     OUTPUT:
@@ -41,25 +41,25 @@ def index_counties(df):
         - Dataframe for lookup of county fips
     '''
     # Get a list of unique county fips codes and calculate # unique counties
-    counties = df['state_and_county_fips_code'].unique()
+    counties = train_counties.unique()
     n_counties = len(counties)
     # Create a lookup table with the index 0 to n_counties matching to unique fips code
     cty_lookup = pd.DataFrame(zip(range(n_counties), counties), columns = ['idx', 'fips'])
-    # Merge the original dataframe with the cty_lookup table
-    output = df.merge(cty_lookup, how = 'left', left_on = 'state_and_county_fips_code', right_on = 'fips')
-    # Drop the fips code
-    output = output.drop(['state_and_county_fips_code', 'fips'], axis = 1)
+    # Match each of the train labels to the corresponding index
+    output = np.array([cty_lookup.loc[cty_lookup['fips'] == x, 'idx'].values[0] for x in train_counties])
     return output, cty_lookup
 
-def specify_variables(df):
+def train_test_split(df):
     '''
     INPUT: Pandas dataframe output from index_counties
     OUTPUT: X features array, y target array, labels array for use in pymc3 model
     '''
-    x = df['year'].values
-    y = df['actual_per_capita_costs'].values
-    labels = df['idx'].values
-    return x, y, labels
+    x_train = df.loc[df['year'] < 6, 'year'].values
+    x_test = df.loc[df['year'] == 7, 'year'].values
+    y_train = df.loc[df['year'] < 6, 'actual_per_capita_costs'].values
+    y_test = df.loc[df['year'] == 7, 'actual_per_capita_costs']
+    train_counties = df.loc[df['year'] < 6, 'state_and_county_fips_code']
+    return x_train, x_test, y_train, y_test, train_counties
 
 def build_eval_df(trace, features_df, lookup_df, burn = 500):
     '''
@@ -91,7 +91,7 @@ def build_eval_df(trace, features_df, lookup_df, burn = 500):
     lookup_df['betas_lower_bound'] = betas_lower_bound
     lookup_df['betas_upper_bound'] = betas_upper_bound
     # Merge the cty_lookup dataframe with the features dataframe to have alpha and beta for eacy year-county combination
-    eval_df = features_df.merge(cty_lookup, how = 'left', on = 'idx')
+    eval_df = features_df.merge(cty_lookup, how = 'left', left_on = 'state_and_county_fips_code', right_on = 'fips')
     # Calculate the predicted spending based on mean alpha and beta
     eval_df['predicted'] =  eval_df['alpha'] + eval_df['beta'] * eval_df['year']
     # Find the residuals
@@ -157,15 +157,15 @@ if __name__ == '__main__':
     data = process_data()
     subset = sample_data(data)
     # Get features dataframe and a lookup table of index to fips code
-    features, cty_lookup = index_counties(subset)
-    x, y, labels = specify_variables(features)
-    n_counties = len(np.unique(labels))
+    x_train, x_test, y_train, y_test, train_counties = train_test_split(subset)
+    n_counties = len(np.unique(train_counties))
+    train_labels, cty_lookup = index_counties(train_counties)
 
     # Build the hierarchical linear model
     # This approach is taken from http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/
     with pm.Model() as hierarchical_model:
         # Hyperprior for the intercept mean
-        mu_a = pm.Normal('mu_alpha', mu = np.mean(y[np.where(x == 0)[0]]), sd = np.var(y[np.where(x == 0)[0]]))
+        mu_a = pm.Normal('mu_alpha', mu = np.mean(y_train[np.where(x_train == 0)[0]]), sd = np.var(y_train[np.where(x_train == 0)[0]]))
         # Hyperprior for the intercept standard deviation
         sigma_a = pm.Uniform('sigma_alpha', lower = 0, upper = 5000)
         # Hyperprior for the time coefficient
@@ -179,9 +179,9 @@ if __name__ == '__main__':
         # Model error
         eps = pm.Uniform('eps', lower = 0, upper = 10000)
         # Model prediction of actual per capita costs
-        medicare_spending = a[labels] + b[labels] * x
+        medicare_spending = a[train_labels] + b[train_labels] * x_train
         # Data likelihood
-        medicare_spending_like = pm.Normal('spending_like', mu = medicare_spending, sd = eps, observed = y)
+        medicare_spending_like = pm.Normal('spending_like', mu = medicare_spending, sd = eps, observed = y_train)
     # Get the posterior traces
     with hierarchical_model:
         mu, sds, elbo = pm.variational.advi(n=100000)
@@ -189,8 +189,8 @@ if __name__ == '__main__':
         hierarchical_trace = pm.sample(5000, step, start = mu)
 
     # Aggregate data for evaluation in Pandas Dataframe
-    eval_df = build_eval_df(hierarchical_trace, features, cty_lookup)
-    # Calculate rmse
-    rmse = rmse_calc(eval_df['residual'].values)
-    # Plot the confidence interval
-    plot_ci(cty_lookup)
+    eval_df = build_eval_df(hierarchical_trace, subset, cty_lookup)
+    # # Calculate rmse
+    # rmse = rmse_calc(eval_df['residual'].values)
+    # # Plot the confidence interval
+    # plot_ci(cty_lookup)
