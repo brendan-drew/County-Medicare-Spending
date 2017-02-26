@@ -22,36 +22,46 @@ class HierarchicalModel(object):
         # List of strings of coefficient names
         self.scaled_features = scaled_features
         self.unscaled_features = unscaled_features
-        if self.unscaled_features:
+        if self.unscaled_features and self.scaled_features:
             self.coef_list = unscaled_features + scaled_features
-        else:
+        elif self.scaled_features:
             self.coef_list = scaled_features
-        # List of random counties to be tested
-        self.n_counties = subset
-        self.counties = np.random.choice(data['state_and_county_fips_code'].unique(), size = subset, replace = False)
+        else:
+            self.coef_list = unscaled_features
+        if subset:
+            self.counties = np.random.choice(data['state_and_county_fips_code'].unique(), size = subset, replace = False)
+        else:
+            self.counties = np.unique(data['state_and_county_fips_code'])
         # Dataframe with dropped na values
         data['subset_flag'] = data['state_and_county_fips_code'].apply(lambda x: 1 if x in self.counties else 0)
         self.data = data.loc[data['subset_flag'] == 1, ['state_and_county_fips_code'] + self.coef_list + [target]].dropna()
+        # List of random counties to be tested
+        if subset:
+            self.n_counties = subset
+        else:
+            self.n_counties = len(self.counties)
         # Array of target values for training
         self.target_train = self.data.loc[self.data['year'] < train_cutoff, target].values
         # Array of target values for testing
         self.target_test = self.data.loc[self.data['year'] >= train_cutoff, target].values
         # StandardScaler object used to transform features
         self.scaler = StandardScaler()
-        # Transformed scaled features matrix for training
-        self.scaled_train_features = self.scale_train_features(self.data.loc[self.data['year'] < train_cutoff, scaled_features].values)
+        if self.scaled_features:
+            # Scaled features to be used for training
+            self.scaled_train_features = self.scale_train_features(self.data.loc[self.data['year'] < train_cutoff, scaled_features].values)
         # Transformed scaled features matrix for testing
-        self.scaled_test_features = self.scaler.transform(self.data.loc[self.data['year'] >= train_cutoff, scaled_features].values)
+        if self.scaled_features:
+            self.scaled_test_features = self.scaler.transform(self.data.loc[self.data['year'] >= train_cutoff, scaled_features].values)
         if self.unscaled_features:
             # Unscaled features matrix for training
             self.unscaled_train_features = self.data.loc[self.data['year'] < train_cutoff, unscaled_features].values
-            # Unscaled features matrix for testing
-            self.unscaled_test_features = self.data.loc[self.data['year'] >= train_cutoff, unscaled_features].values
         # Features training matrix to be used in model
-        if self.unscaled_features:
+        if self.unscaled_features and self.scaled_features:
             self.features_matrix = np.hstack((self.unscaled_train_features, self.scaled_train_features))
-        else:
+        elif self.scaled_features:
             self.features_matrix = self.scaled_train_features
+        else:
+            self.features_matrix = self.unscaled_train_features
         # Instantiate a dataframe to hold county-level fips and coefficients
         self.lookup_df = pd.DataFrame(range(len(self.counties)), index = self.counties)
         # Get the training labels matched to fips
@@ -70,6 +80,8 @@ class HierarchicalModel(object):
         self.residual_rmse = np.sqrt(np.mean(self.evaluation_df.loc[self.evaluation_df['year'] < 6, 'residuals']**2))
         # Calculate the DIC
         self.dic = pm.stats.dic(model = self.model, trace = self.trace)
+        # Calculate the WAIC
+        self.waic = pm.stats.waic
 
 
     def scale_train_features(self, features):
@@ -160,7 +172,8 @@ class HierarchicalModel(object):
         if self.unscaled_features:
             for var in self.unscaled_features:
                 predictions += output_df['beta_' + var + '_mean'] * output_df[var]
-        transformed_features = self.scaler.transform(output_df[self.scaled_features])
+        if self.scaled_features:
+            transformed_features = self.scaler.transform(output_df[self.scaled_features])
         for i, var in enumerate(self.scaled_features):
             predictions += output_df['beta_' + var + '_mean'] * transformed_features[:,i]
         # Append the predictions to the dataframe and calculate residuals
@@ -168,22 +181,46 @@ class HierarchicalModel(object):
         output_df['residuals'] = output_df['predictions'] - output_df['actual_per_capita_costs']
         return output_df
 
-    def save_results(self):
-        output = {residual_error: self.residual_rmse, rmse_2013: self.rmse_2013, rmse_2014: self.rmse_2014, dic: self.dic}
-        df = pd.DataFrame.from_dict(output, index = self.coef_list)
+    def get_results(self):
+        return {'coefficients': self.coef_list, 'residual_error': self.residual_rmse, 'rmse_2013': self.rmse_2013, 'rmse_2014': self.rmse_2014, 'dic': self.dic, 'waic' = self.waic}
+
+class NationalModel(object):
+
+    def __init__(self, data, target, states = None, county_subset_size = None, unscaled_features = [], scaled_features = [], train_cutoff = 6, progressbar = True):
+        if not states:
+            self.states = ['AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA', 'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME', 'MI', 'MN', 'MO', 'MS', 'MT', 'NC', 'ND', 'NE', 'NH', 'NJ', 'NM', 'NV', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY']
+        else:
+            self.states = states
+        self.data = data
+        self.target = target
+        self.unscaled_features = unscaled_features
+        self.scaled_features = scaled_features
+        self.county_subset_size = county_subset_size
+        self.states = states
+        self.models = self.get_models()
+        self.evaluation_df = self.build_evaluation_df()
+        self.lookup_df = self.build_lookup_df()
+
+    def get_models(self):
+        models = {}
+        for state in self.states:
+            subset = self.data.loc[self.data['state'] == state, :]
+            hm = HierarchicalModel(data = subset, target = self.target, unscaled_features = self.unscaled_features, scaled_features = self.scaled_features, subset = self.county_subset_size)
+            models[state] = {'mod': hm.model, 'trace': hm.trace, 'evaluation_df': hm.evaluation_df, 'lookup_df': hm.lookup_df}
+        return models
+
+    def build_evaluation_df(self):
+        df_list = []
+        for key in self.models.iterkeys():
+            df_list.append(self.models[key]['evaluation_df'])
+        return pd.concat(df_list)
+
+    def build_lookup_df(self):
+        df_list = []
+        for key in self.models.iterkeys():
+            df_list.append(self.models[key]['lookup_df'])
+        return pd.concat(df_list)
+
 
 if __name__ == '__main__':
-    np.random.seed(123)
-    data = pd.read_csv('data/medicare_county_level/cleaned_medicare_county_all.csv')
-    data['year'] = data['year'] - 2007
-    data['years_post_aca'] = data['year'].apply(lambda x: x - 3 if x > 2 else 0)
-    #hm = HierarchicalModel(data, 'actual_per_capita_costs', ['year', 'years_post_aca'], ['ip_covered_stays_per_1000_beneficiaries'])
-    #, 'pac:_hh_episodes_per_1000_beneficiaries', 'average_age', 'percent_eligible_for_medicaid', 'ffs_beneficiaries', 'ma_participation_rate', 'ambulance_events_per_1000_beneficiaries', '%_of_beneficiaries_using_outpatient_dialysis_facility'])
-    vars_to_test = ['ip_covered_stays_per_1000_beneficiaries', 'pac:_hh_episodes_per_1000_beneficiaries']
-    results_df = {}
-    for i, var in enumerate(vars_to_test):
-        hm = HierarchicalModel(data, 'actual_per_capita_costs', ['year', 'years_post_aca'], vars_to_test[:i+1])
-        output = hm.save_results()
-        results_df.append(output, ignore_index = True)
-    with open('model_results.csv', 'a') as f:
-        results_df.to_csv(f)
+    pass
