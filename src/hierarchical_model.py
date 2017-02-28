@@ -238,34 +238,63 @@ class NationalModel(object):
     Constructs unique hierarchical linear models predicting a target from one or more features of interest for each state.
     '''
     def __init__(self, data, target, county_subset_size = None, unscaled_features = [], scaled_features = [], train_cutoff = 6, progressbar = True):
+        # Get the list of unique states to be included in the subset
         self.states = data['state'].unique()
+        # Set the input dataframe, target variable, and scaled/unscaled features lists as class attributes
         self.data = data
         self.target = target
         self.unscaled_features = unscaled_features
         self.scaled_features = scaled_features
+        # Get the number of unique counties to be included in the model
         self.county_subset_size = county_subset_size
+        # Get the state models as a dictionary
         self.models = self.get_models()
+        # Build an evaluation dataframe with the linear model parameters and predictions for each county-year
         self.evaluation_df = self.build_evaluation_df()
+        # Build a lookup dataframe with the linear model parameters for each county
         self.lookup_df = self.build_lookup_df()
 
     def get_models(self):
+        '''
+        INPUT: None
+        OUTPUT: Builds a hierarchical linear model for the counties of each unique state, and adds a dictionary of the model, trace, evaluation dataframe, and lookup dataframe for that state's model to the dictionary of models (a class attribute)
+        '''
+        # Instanciate a dictionary - each state to be used as a key
         models = {}
         for state in self.states:
+            # Subset the data for that state
             subset = self.data.loc[self.data['state'] == state, :]
+            # Create a linear model for the counites in the state
             hm = HierarchicalModel(data = subset, target = self.target, unscaled_features = self.unscaled_features, scaled_features = self.scaled_features, subset = self.county_subset_size)
+            # Add the model to the dictionary
             models[state] = {'mod': hm.model, 'trace': hm.trace, 'evaluation_df': hm.evaluation_df, 'lookup_df': hm.lookup_df}
+        # Return the dictionary as a class attribute
         return models
 
     def build_evaluation_df(self):
+        '''
+        INPUT: None
+        OUTPUT: Takes the evaluation dataframes of the individual state models and concatenates them to a single dataframe
+        '''
+        # Instanciate a list of dataframes to be concatenated
         df_list = []
+        # For each state, append the evaluation dataframe to the list
         for key in self.models.iterkeys():
             df_list.append(self.models[key]['evaluation_df'])
+        # Return a concatenated dataframe
         return pd.concat(df_list)
 
     def build_lookup_df(self):
+        '''
+        INPUT: None
+        OUTPUT: Takes the lookup dataframes of the individual state models and concatenates them to a single dataframe
+        '''
+        # Instanciate a list of dataframes to be concatenated
         df_list = []
+        # For each state, append the lookup dataframe to the list
         for key in self.models.iterkeys():
             df_list.append(self.models[key]['lookup_df'])
+        # Return a concatenated dataframe
         return pd.concat(df_list)
 
 
