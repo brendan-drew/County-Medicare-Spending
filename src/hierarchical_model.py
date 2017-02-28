@@ -63,7 +63,7 @@ class HierarchicalModel(object):
 
     def build_data_frame(self, data):
         data['subset_flag'] = data['state_and_county_fips_code'].apply(lambda x: 1 if x in self.counties else 0)
-        return data.loc[data['subset_flag'] == 1, ['state_and_county_fips_code'] + self.coef_list + [self.target]].dropna()
+        return data.loc[data['subset_flag'] == 1, ['state_and_county_fips_code', 'year'] + self.coef_list + [self.target]].dropna()
 
     def build_features_matrix(self):
         if self.unscaled_features:
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     data = pd.read_csv('data/medicare_county_level/cleaned_medicare_county_all.csv')
     data['year'] = data['year'] - 2007
     data['years_post_aca'] = data['year'].apply(lambda x: x - 3 if x > 3 else 0)
-    unscaled_features = ['year', 'years_post_aca']
+    unscaled_features = ['years_post_aca']
     scaled_features = ['ip_covered_stays_per_1000_beneficiaries']
     np.random.seed(123)
-    hm = HierarchicalModel(data, 'actual_per_capita_costs', unscaled_features, scaled_features, subset = 10)
+    hm = HierarchicalModel(data, 'actual_per_capita_costs', unscaled_features, scaled_features, subset = 500)
