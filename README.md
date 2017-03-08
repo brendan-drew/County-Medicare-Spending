@@ -28,7 +28,7 @@ I chose to model my data with a Bayesian Hierarchical Linear Model and Gaussian 
 
 We know that counties are different, so the simplest approach to this forecasting challenge is to build a linear regression model unique to each county. To start, we'll forecast Medicare Spending for each county as a function of year:
 
-<center>y = \alpha\ + \beta\x + \epsilon\</center>
+<center>$y = \alpha + \beta x + \epsilon$</center>
 
 <center>y: Medicare spending per beneficiary</center>
 <center>x: year</center>
@@ -37,7 +37,11 @@ We know that counties are different, so the simplest approach to this forecastin
 For additional information on the rationale/importance of forecasting Medicare spending, please refer to:
 
 ![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/ols_with_forecast.png)
-#### Figure 1: Distribution of counties in each state by 2014 Medicare spending per beneficiary
+#### Figure 2: Distribution of counties in each state by 2014 Medicare spending per beneficiary
+
+We can see that the simple regression model fits training data well, and that from 2007 - 2012 Medicare spending appears to be increasing in two of the counties, and decreasing in two others.
+
+However, particularly in the case of Terrell Co. and Morrow Co.
 
 * [NHE Fact Sheet (Centers for Medicare & Medicaid Services)] (https://www.cms.gov/research-statistics-data-and-systems/statistics-trends-and-reports/nationalhealthexpenddata/nhe-fact-sheet.html)
 
