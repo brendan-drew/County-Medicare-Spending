@@ -3,7 +3,7 @@
 
 This is my Galvanize capstone project forecasting Medicare spending in 2014 using data from 2007 - 2012 in a Bayesian Hierarchical Linear Regression Model.
 
-Accurately forecasting Medicare spending is a topic of strong interest to health policy and provider organizations. In recent years, this topic has gained greater attention as providers contract with Medicare under contracts in which shared risk is assumed for patients' medical costs.
+Accurately forecasting Medicare spending is a topic of strong interest to health policy and provider organizations. In recent years, this topic has gained greater attention as providers contract with Medicare to assume shared risk for patients' medical costs.
 
 ##Counties are different!
 
@@ -42,7 +42,7 @@ We can see that the simple regression model fits training data well, and that fr
 
 However, particularly in the case of Terrell Co. and Morrow Co., the model appears to be overfit to the training data, and the change in Medicare spending per beneficiary in 2014 is less extreme than predicted by the simple regression model.
 
-##Counties are different!... but also similar
+##Counties are different!... but also similar: The case for hierarchical modeling
 
 The simple regression approach fits a unique linear model with independent parameters to each county's data. In other words, it doesn't take into account similarities between counties.
 
@@ -103,11 +103,73 @@ with hierarchical_model:
     return pm.sample(5000, step, start = mu), hierarchical_model
 ```
 
-PyMC3 also includes a useful traceplot function  for visualizing the posterior parameter distributions:
+PyMC3 also includes a useful traceplot function  for visualizing the posterior parameter distributions, shown below in *Figure 3*.
 
 ![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/baseline_hierarchical_trace.png)
 #### Figure 3: PyMC3 traceplot
 
+The first two rows of the traceplot above show the probability distributions of population mean model parameters, and are followed by two rows with the probability distributions of the individual model parameters, two rows with the standard deviations of population model parameters, and finally the distribution of our model error.
+
+Whereas most forecasts of Medicare spending provide single point estimates, an advantage of this Bayesian modeling approach is that we can extrapolate from our model parameter distributions a *probability distribution* of spending forecasts in the future.
+
+*Figure 4* shows the same four counties discussed previously, with the independent simple regression line in red.
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/hier_ols_compare.png)
+#### Figure 4: Comparison of the hierarchical and simple regression model for 4 U.S. counties
+
+As the shaded blue are indicates, from our model parameter posterior distributions we can obtain a 95% confidence interval for the "true" regression line of each county. Our best forecast is at the mean of the distribution, shown in the dark blue regression line.
+
+In all four counties, the "shrinkage" effect of hierarchical modeling is clearly evident. Model parameters are pulled toward the population mean - those with a positive simple regression line slope have a shallower hierarchical regression line slope. Those with a negative simple regression line slope have a slightly positive hierarchical regression line slope. In three out of the four counties, you can see that the hierarchical regression model better estimates Medicare spending in 2014 - this is a result of hierarchical modeling's consideration of the probability of model parameters given what we know about the population of all U.S. counties, not just the fit to that specific county's data.
+
+##Feature Selection with the Hierarchical Model
+
+The hierarchical model described above is extremely simple, modeling spending per beneficiary as a function of time. The Medicare dataset also includes hundreds of variables on county-level beneficiary demographics and health services utilization rates. After some EDA exploring which variables correlated most closely, I built hierarchical linear models with 25 different combinations of variables. Model performance was evaluated based on DIC score and 2013/2014 model forecast error. Results of this analysis are shown in *Table 1*.
+
+|Features|DIC|Train RMSE|2013 RMSE|2014 RMSE|
+|---|---|---|---|---|---|
+|'year'|60436|$350|$723|$918|
+|'year', 'years_post_aca'|67210|$352|$526|$633|
+|*'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries'*|*72760*|*$368*|*$438*|*$512*|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'ffs_beneficiaries'|78212|$198|$423|$565|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'ma_participation_rate'|79068|$222|$389|$502|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'average_age'|79348|$241|$415|$529|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'percent_female'|80389|$222|$480|$642|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'percent_eligible_for_medicaid'|76759|$274|$423|$563|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'pac:_ltch_covered_stays_per_1000_beneficiaries'|79488|$216|$530|$646|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'pac:_irf_covered_stays_per_1000_beneficiaries'|78233|$206|$384|$523|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'pac:_snf_covered_stays_per_1000_beneficiaries'|78696|$212|$485|$555|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'pac:_hh_visits_per_1000_beneficiaries'|79015|$270|$432|$570|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'hospice_covered_stays_per_1000_beneficiaries'|79394|$225|$484|$626|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'op_visits_per_1000_beneficiaries'|80085|$363|$438|$519|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'fqhc/rhc_visits_per_1000_beneficiaries'|79423|$218|$438|$573|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', '%_of_beneficiaries_using_outpatient_dialysis_facility'|79419|$215|$446|$596|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'asc_events_per_1000_beneficiaries'|79381|$231|$442|$500|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'e&m_events_per_1000_beneficiaries'|79246|$212|$461|$536|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'imaging_events_per_1000_beneficiaries'|79519|$349|$436|$525|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'dme_events_per_1000_beneficiaries'|79977|$246|$563|$686|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'test_events_per_1000_beneficiaries'|79910|$241|$486|$557|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', '%_of_beneficiaries_using_part_b_drugs'|80791|$239|$472|$633|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'ambulance_events_per_1000_beneficiaries'|79665|$226|$504|$551|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'hospital_readmission_rate'|78510|$251|$430|$586|
+|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'emergency_department_visits_per_1000_beneficiaries'|79303|$246|$415|$535|
+#### Table 1: Data used in hierarchical model feature selection
+
+The final model selected, for its simplicity and predictive power, included the features: year, years since Affordable Care Act implementation, and rate of inpatient hospitalizations per 1000 beneficiaries.
+
+Those familiar with linear regression modeling will notice that this model violates one of the primary assumptions of linear regression: the absence of collinearity among the independent variables. "Year" and "years since Affordable Care Act implementation" are by definition collinear. The Affordable Care Act of 2010 and the Budget Control Act of 2011 both cut Medicare reimbursement rates, and across the U.S. a noticeable decline in the rate of increase in Medicare spending starting in 2010 was evident. As inclusion of this variable significantly improved the model's predictive power, a conscious decision was made to violate the rules of linear regression and include the variable. It should be noted that this decision introduces bias to both coefficients for "year" and "years", and they should be interpreted with caution.
+
+Of all health services utilization variables included in Medicare's dataset, the rate of inpatient hospitalizations per 1000 beneficiaries most strongly correlates with per capita Medicare spending in the county. Inpatient hospitalizations are extremely expensive, and a generally strong indicator of overall health.
+
+##Evaluating hierarchical model performance
+
+With our three model features selected (see above discussion), the hierarchical linear model's performance can be evaluated by comparing the forecast of Medicare spending in 2014 to the actual per capital spending. *Figure 5* below presents these results.
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/act_v_hier_ci.png)
+####Figure 5: Comparison of hierarchical linear model 2014 forecast to actual Medicare per capita spending, with and without confidence intervals
+
+The dashed red lines in Figure 5 indicate where a perfect prediction would fall, i.e. the closer predictions are to the red line, the better. Overall, the hierarchical model had an RMSE for 2014 of $554 (for a sense of scale, average spending per Medicare beneficiary across counties was $8,700).
+
+A key feature of Bayesian modeling, it is worth noting, is that we can obtain a *confidence interval* for our forecasts. While the subplot on the left in Figure 5 shows the point estimate of Medicare spending from the mean regression line, the subplot on the right includes a 95% confidence interval of our forecast. There are a few instances highlighted in red where actual spending fell outside our confidence interval (this is why it's a 95% confidence interval and not a 100% confidence interval), but we can see that in the great majority of cases actual per capita spending fell within our forecast CI.
 
 
 For additional information on the rationale/importance of forecasting Medicare spending, please refer to:
