@@ -1,5 +1,5 @@
 #Forecasting Medicare Spending at the County level
-##A Bayesian Hierarchical Linear Modeling Approach
+###*A Bayesian Hierarchical Linear Modeling Approach*
 
 This is my Galvanize capstone project forecasting Medicare spending in 2014 using data from 2007 - 2012 in a Bayesian Hierarchical Linear Regression Model.
 
@@ -16,7 +16,7 @@ My hypothesis for this analysis was that trends in Medicare over time would be s
 
 ##The Data
 
-Medicare makes available a [public use dataset](http://ahrf.hrsa.gov/download.htm) that includes county-level data on Medicare spending, beneficiary demographics, and healthcare utilization for all U.S. counties from 2007 - 2014.
+Medicare makes available a *[public use dataset](http://ahrf.hrsa.gov/download.htm)* that includes county-level data on Medicare spending, beneficiary demographics, and healthcare utilization for all U.S. counties from 2007 - 2014.
 
 ##Model Selection
 
@@ -26,7 +26,18 @@ I chose to model my data with a Bayesian Hierarchical Linear Model and Gaussian 
 
 ## A Simple Regression Model
 
+We know that counties are different, so the simplest approach to this forecasting challenge is to build a linear regression model unique to each county. To start, we'll forecast Medicare Spending for each county as a function of year:
+
+<center>y = \alpha\ + \beta\x + \epsilon\</center>
+
+<center>y: Medicare spending per beneficiary</center>
+<center>x: year</center>
+
+*Figure 2* shows this simple regression model fit to four unique counties, where the parameters of each model are fully independent.
 For additional information on the rationale/importance of forecasting Medicare spending, please refer to:
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/ols_with_forecast.png)
+#### Figure 1: Distribution of counties in each state by 2014 Medicare spending per beneficiary
 
 * [NHE Fact Sheet (Centers for Medicare & Medicaid Services)] (https://www.cms.gov/research-statistics-data-and-systems/statistics-trends-and-reports/nationalhealthexpenddata/nhe-fact-sheet.html)
 
