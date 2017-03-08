@@ -1,4 +1,5 @@
-# Bayesian Hierarchical Linear Modeling of Medicare Spending at the County Level
+#Forecasting Medicare Spending at the County level
+##A Bayesian Hierarchical Linear Modeling Approach
 
 This is my Galvanize capstone project forecasting Medicare spending in 2014 using data from 2007 - 2012 in a Bayesian Hierarchical Linear Regression Model.
 
