@@ -28,7 +28,7 @@ I chose to model my data with a Bayesian Hierarchical Linear Model and Gaussian 
 
 We know that counties are different, so the simplest approach to this forecasting challenge is to build a linear regression model unique to each county. To start, we'll forecast Medicare Spending for each county as a function of year:
 
-<center>$y = \alpha + \beta x + \epsilon$</center>
+<center>![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/simple_regression.png)</center>
 
 <center>y: Medicare spending per beneficiary</center>
 <center>x: year</center>
