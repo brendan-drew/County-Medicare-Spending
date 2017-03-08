@@ -51,6 +51,7 @@ But we do know that many of the same factors impact all U.S. counties. For examp
 This scenario where we have independent "clusters" of data nested in units with underlying similarities is a classic use case for *hierarchical modeling*. In our forecast challenge, each county will have a unique regression model, but the parameters of the model (intercept and slope coefficients) will be assumed to follow a normal distribution within the population of U.S. counties, centered at some mean:
 
 ![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/alpha_dist.png)
+
 ![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/beta_dist.png)
 
 We now have a Bayesian model specification with defined model parameter prior distributions. The python library PyMC3 allows us to use an MCMC algorithm to find a probability distribution for *both* the population mean parameters and each county's distinct model parameters.
@@ -104,7 +105,7 @@ with hierarchical_model:
 
 PyMC3 also includes a useful traceplot function  for visualizing the posterior parameter distributions:
 
-![alt text](https://github.com/https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/baseline_hierarchical_trace.png)
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/baseline_hierarchical_trace.png)
 #### Figure 3: PyMC3 traceplot
 
 
