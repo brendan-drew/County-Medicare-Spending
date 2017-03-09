@@ -5,6 +5,22 @@ This is my Galvanize capstone project forecasting Medicare spending in 2014 usin
 
 Accurately forecasting Medicare spending is a topic of strong interest to health policy and provider organizations. In recent years, this topic has gained greater attention as providers contract with Medicare to assume shared risk for patients' medical costs.
 
+##Jump to a section
+
+[create an anchor](#Counties-are-different!)
+[create an anchor](#The-Data)
+[create an anchor](#Model-Selection)
+[create an anchor](#A-Simple-Regression-Model)
+[create an anchor](#Counties-are-different!...-but-also-similar:-The-case-for-hierarchical-modeling)
+[create an anchor](#Bayesian-Hierarchical-Linear-Modeling-with-PyMC3)
+[create an anchor](#Feature-Selection-with-the-Hierarchical-Model)
+[create an anchor](#Evaluating-hierarchical-model-performance)
+[create an anchor](#A-brief-non-parametric detour:-Gaussian-Process-Regression-Modeling)
+[create an anchor](#Comparing-our-three-modeling-approaches)
+[create an anchor](#But-wait...-Is-this-a-true-forecast?)
+[create an anchor](#Conclusions/Contact-Information)
+[create an anchor](#Sources/Additional-Resources)
+
 ##Counties are different!
 
 ![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/county_spendinging_dist.png)
