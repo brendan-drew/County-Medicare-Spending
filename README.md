@@ -15,7 +15,7 @@ Accurately forecasting Medicare spending is a topic of strong interest to health
 * [Bayesian Hierarchical Linear Modeling with PyMC3](#bayesian-hierarchical-linear-modeling-with-pymc3)
 * [Feature Selection with the Hierarchical Model](#feature-selection-with-the-hierarchical-model)
 * [Evaluating Hierarchical Model performance](#evaluating-hierarchical-model-performance)
-* [Gaussian Process Regression Modeling](#a-brief-non-parametric detour-gaussian-process-regression-modeling)
+* [Gaussian Process Regression Modeling](#a-brief-nonparametric detour-gaussian-process-regression-modeling)
 * [Comparing Modeling Approaches](#comparing-our-three-modeling-approaches)
 * [Working with a Forecast of Hospitalization Rate](#but-wait-is-this-a-true-forecast)
 * [Conclusions/Contact Information](#conclusionscontact-information)
