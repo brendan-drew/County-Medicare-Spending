@@ -299,4 +299,11 @@ class NationalModel(object):
 
 
 if __name__ == '__main__':
-    pass
+    np.random.seed(123)
+    data = pd.read_csv('data/medicare_county_level/cleaned_medicare_county_all.csv')
+    data['year'] = data['year'] - 2007
+    data['years_post_aca'] = data['year'].apply(lambda x: x - 3 if x > 3 else 0)
+    hm = HierarchicalModel(data, 'ip_covered_stays_per_1000_beneficiaries', unscaled_features = ['year'], scaled_features = [], subset = None)
+
+    with open('hosp_forecast_all_counties.pkl', 'w') as f:
+        pickle.dump(hm, f)
