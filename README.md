@@ -7,19 +7,19 @@ Accurately forecasting Medicare spending is a topic of strong interest to health
 
 ##Jump to a section
 
-[create an anchor](#Counties-are-different!)
-[create an anchor](#The-Data)
-[create an anchor](#Model-Selection)
-[create an anchor](#A-Simple-Regression-Model)
-[create an anchor](#Counties-are-different!...-but-also-similar:-The-case-for-hierarchical-modeling)
-[create an anchor](#Bayesian-Hierarchical-Linear-Modeling-with-PyMC3)
-[create an anchor](#Feature-Selection-with-the-Hierarchical-Model)
-[create an anchor](#Evaluating-hierarchical-model-performance)
-[create an anchor](#A-brief-non-parametric detour:-Gaussian-Process-Regression-Modeling)
-[create an anchor](#Comparing-our-three-modeling-approaches)
-[create an anchor](#But-wait...-Is-this-a-true-forecast?)
-[create an anchor](#Conclusions/Contact-Information)
-[create an anchor](#Sources/Additional-Resources)
+* [Counties are Different!](#counties-are-different!)
+* [The Data](#the-data)
+* [Model Selection](#model-selection)
+* [A Simple Regression Model](#a-simple-regression-model)
+* [The Case for Bayesian Hierarchical Modeling](#counties-are-different!...-but-also-similar:-the-case-for-hierarchical-modeling)
+* [Bayesian Hierarchical Linear Modeling with PyMC3](#bayesian-hierarchical-linear-modeling-with-pymc3)
+* [Feature Selection with the Hierarchical Model](#feature-selection-with-the-hierarchical-model)
+* [Evaluating Hierarchical Model performance](#evaluating-hierarchical-model-performance)
+* [Gaussian Process Regression Modeling](#a-brief-non-parametric detour:-gaussian-process-regression-modeling)
+* [Comparing Modeling Approaches](#comparing-our-three-modeling-approaches)
+* [Working with a Forecast of Hospitalization Rate](#but-wait...-is-this-a-true-forecast?)
+* [Conclusions/Contact Information](#conclusions/contact-information)
+* [Sources](#sources/additional-resources)
 
 ##Counties are different!
 
