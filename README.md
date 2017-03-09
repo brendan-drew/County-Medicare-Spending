@@ -167,10 +167,71 @@ With our three model features selected (see above discussion), the hierarchical 
 ![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/act_v_hier_ci.png)
 ####Figure 5: Comparison of hierarchical linear model 2014 forecast to actual Medicare per capita spending, with and without confidence intervals
 
-The dashed red lines in Figure 5 indicate where a perfect prediction would fall, i.e. the closer predictions are to the red line, the better. Overall, the hierarchical model had an RMSE for 2014 of $554 (for a sense of scale, average spending per Medicare beneficiary across counties was $8,700).
+The dashed red lines in Figure 5 indicate where a perfect prediction would fall, i.e. the closer predictions are to the red line, the better. Overall, the hierarchical model had an RMSE for 2014 of **$554** (for a sense of scale, average spending per Medicare beneficiary across counties was $8,700).
 
 A key feature of Bayesian modeling, it is worth noting, is that we can obtain a *confidence interval* for our forecasts. While the subplot on the left in Figure 5 shows the point estimate of Medicare spending from the mean regression line, the subplot on the right includes a 95% confidence interval of our forecast. There are a few instances highlighted in red where actual spending fell outside our confidence interval (this is why it's a 95% confidence interval and not a 100% confidence interval), but we can see that in the great majority of cases actual per capita spending fell within our forecast CI.
 
+##A brief non-parametric detour: Gaussian Process Regression Modeling
+
+Thus far we've looked at both simple and hierarchical linear regression models. There are powerful non-parametric method to forecasting data, one of the most adaptable and widely used of which is Gaussian Process Regression Modeling.
+
+GP regression is appropriate when data observations are collected in evenly spaced intervals (as is our annual Medicare spending data). It assumes that observations of the target variable can be modeled with some latent function f(x), which follows a multivariate normal distribution and can be described through a mean and covariance function.
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/gp_formula.png)
+
+The hyperparameters of this function can be optimized with log-marginal-likelihood or other user-specified method. SciKit Learn has implemented a straightforward [Gaussian Process Regression Module](http://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html), in which the user specifies parameters alpha (the noise level in the data), and a kernel specifying the covariance function. These parameters are best determined through cross-validation.
+
+I decided to try fitting a GP regression model to my data with an RBF kernel (a very powerful and adaptable kernel). *Figure 6* shows a GP regression model fit to data from Terrell Co., GA, at varying values of "noise level" alpha.
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/gaussian.png)
+####Figure 6: Gaussian Process Regression Model of Medicare spending trend in Terrell Co., GA, at varying levels of parameter alpha.
+
+As shown in *Figure 7*, I found the optimal value of parameter alpha to be ~0.7
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/gaussian.png)
+####Figure 7: Gaussian Process Regression 2014 forecast error as a function of alpha parameter value.
+
+The GP regression model clearly seems to be picking up the trend that the rate of increase in Medicare spending (or "acceleration" in spending) started to decline in 2010, and it reasonably "assumes" that this trend continues. As will be discussed in the next section, this causes GP regression to consistently underestimate costs in 2014. A takeaway from this example is that GP regression is a powerful non-parametric forecasting tool, but that it requires a significant amount of data for training to accurately capture trends over time.
+
+Worth noting is that GP regression, like our hierarchical linear model, provides a confidence interval for its forecasts, and that the range of the CI is a function of both the specified parameter alpha and the distance in the model to the nearest point of observation data.
+
+##Comparing our three modeling approaches
+
+*Figure 8* shows the 2014 forecast error of the three modeling approaches we have discussed thus far. These are the results when all U.S. counties are included in the model (excluding a handful where no Medicare spending data was available for 2014). Both the hierarchical and simple regression models include the three features of year, years since ACA implementation, and inpatient hospitalization rate.
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/model_compare.png)
+####Figure 8: A comparison of 2014 forecast error across models
+
+It's clear that our hierarchical regression model is the top performer of the three approaches discussed thus far. The range of forecast error is significantly narrower than the simple regression model. The GP regression, as discussed above, tends to significantly underestimate spending.
+
+##But wait... Is this a true forecast?
+
+Our top-performing model, the hierarchical regression model, forecasts Medicare spending per beneficiary as a linear function of year, years since ACA implementation, and inpatient hospitalization rate. When forecasting for 2014, however, we are cheating in a sense by using the known hospitalization rate for 2014 in each county. How does our model perform when we use a *forecast* of the hospitalization rate in 2014 to predict spending?
+
+I build a second hierarchical regression model, simply forecasting hospitalization rate as a function of year. Feeding this hospitalization rate forecast into our spending model, the RMSE did increase significantly to **$715**. However, I observed that the error of the model was far greater in smaller counties. In Medicare populations, a small number of patients, for example those in the end stages of life or suffering from severe chronic conditions like end-stage renal disease, accrue healthcare costs that are orders of magnitude greater than the general population. I believe that small increases in the number of patients like this can significantly shift average spending on Medicare in small, rural counties. If we limit inclusion in our model to only the 1,326 counties with more than 5000 beneficiaries in 2014, the RMSE improves to **$432**, even with a forecast of hospitalization rate as opposed to a known value. *Figure 8* shows the results of this approach.
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/forecast_large_counties.png)
+####Figure 8: Per capita spending forecasting accuracy in 2014 for large counties (>5,000 beneficiaries) with a forecast of hospitalization rate.
+
+If we were to deploy this model in the "real world," it would be advisable to limit our model to large counties with relatively stable average Medicare costs. In this discussion of forecasting independent model variables, it's worth noting that the more true forecasting incorporated in our model, the greater the level of uncertainty that is introduced. This effect is demonstrated in *Figure 9*.
+
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/denver.png)
+####Figure 9: Probability distribution of 2014 Medicare spending per beneficiary in Denver Co., with a known true hospitalization rate and a forecast of hospitalization rate.
+
+In the particular case of Denver, the mean estimate of 2014 spending is nearly identical with a known vs. forecasted hospitalization rate. Note, however, the significantly wider distribution spending forecasts when hospitalizations are forecasted as well.
+
+##Conclusions/Contact Information
+
+I hope this discussion of modeling Medicare spending through simple vs. hierarchical regression has demonstrated the power of Bayesian hierarchical modeling when dealing with clusters of data that are partially independent, but share underlying similarities.
+
+My key takeaways from this analysis are:
+
+* Bayesian hierarchical modeling can more accurately forecast data than many independent units, and is appropriate whenever observations are "nested" in units that are part of a larger population.
+* The Bayesian approrach provides a *probability distribution* of forecasts, as opposed to single point estimates. In my experience, this paradigm is still uncommon in the healthcare industry, but offers a valuable level of confidence when making business and policy decisions based on forecasting
+* If more data were available, *Hierarchical Gaussian Process Regression Modeling* is a powerful non-parametric forecasting method that could very well out-perform the linear model.
+
+Please don't hesitate to reach out with questions or comments on this analysis!
+I can be reached by email at brendan.drew12@gmail.com.
 
 For additional information on the rationale/importance of forecasting Medicare spending, please refer to:
 
