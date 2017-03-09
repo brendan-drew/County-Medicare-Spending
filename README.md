@@ -7,19 +7,19 @@ Accurately forecasting Medicare spending is a topic of strong interest to health
 
 ##Jump to a section
 
-* [Counties are Different!](#counties-are-different!)
+* [Counties are Different!](#counties-are-different)
 * [The Data](#the-data)
 * [Model Selection](#model-selection)
 * [A Simple Regression Model](#a-simple-regression-model)
-* [The Case for Bayesian Hierarchical Modeling](#counties-are-different!...-but-also-similar:-the-case-for-hierarchical-modeling)
+* [The Case for Bayesian Hierarchical Modeling](#counties-are-different-but-also-similar-the-case-for-hierarchical-modeling)
 * [Bayesian Hierarchical Linear Modeling with PyMC3](#bayesian-hierarchical-linear-modeling-with-pymc3)
 * [Feature Selection with the Hierarchical Model](#feature-selection-with-the-hierarchical-model)
 * [Evaluating Hierarchical Model performance](#evaluating-hierarchical-model-performance)
 * [Gaussian Process Regression Modeling](#a-brief-non-parametric detour:-gaussian-process-regression-modeling)
 * [Comparing Modeling Approaches](#comparing-our-three-modeling-approaches)
-* [Working with a Forecast of Hospitalization Rate](#but-wait...-is-this-a-true-forecast?)
-* [Conclusions/Contact Information](#conclusions/contact-information)
-* [Sources](#sources/additional-resources)
+* [Working with a Forecast of Hospitalization Rate](#but-wait-is-this-a-true-forecast)
+* [Conclusions/Contact Information](#conclusionscontact-information)
+* [Sources](#sourcesadditional-resources)
 
 ##Counties are different!
 
