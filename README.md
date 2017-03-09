@@ -188,7 +188,7 @@ I decided to try fitting a GP regression model to my data with an RBF kernel (a 
 
 As shown in *Figure 7*, I found the optimal value of parameter alpha to be ~0.7
 
-![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/gaussian.png)
+![alt text](https://github.com/brendan-drew/County-Medicare-Spending/blob/master/images/alpha_optimization.png)
 ####Figure 7: Gaussian Process Regression 2014 forecast error as a function of alpha parameter value.
 
 The GP regression model clearly seems to be picking up the trend that the rate of increase in Medicare spending (or "acceleration" in spending) started to decline in 2010, and it reasonably "assumes" that this trend continues. As will be discussed in the next section, this causes GP regression to consistently underestimate costs in 2014. A takeaway from this example is that GP regression is a powerful non-parametric forecasting tool, but that it requires a significant amount of data for training to accurately capture trends over time.
@@ -227,11 +227,15 @@ I hope this discussion of modeling Medicare spending through simple vs. hierarch
 My key takeaways from this analysis are:
 
 * Bayesian hierarchical modeling can more accurately forecast data than many independent units, and is appropriate whenever observations are "nested" in units that are part of a larger population.
+
 * The Bayesian approrach provides a *probability distribution* of forecasts, as opposed to single point estimates. In my experience, this paradigm is still uncommon in the healthcare industry, but offers a valuable level of confidence when making business and policy decisions based on forecasting
+
 * If more data were available, *Hierarchical Gaussian Process Regression Modeling* is a powerful non-parametric forecasting method that could very well out-perform the linear model.
 
 Please don't hesitate to reach out with questions or comments on this analysis!
 I can be reached by email at brendan.drew12@gmail.com.
+
+##Sources/Additional Resources
 
 For additional information on the rationale/importance of forecasting Medicare spending, please refer to:
 
@@ -245,3 +249,5 @@ The methodology of my project draws heavily on the following sources:
 
 * [Multilevel (Hierarchical) Modeling:
 What It Can and Cannot Do (Andrew Gelman)] (http://www.stat.columbia.edu/~gelman/research/published/multi2.pdf)
+
+* [Gaussian Process Regression with SciKit Learn](http://scikit-learn.org/stable/modules/gaussian_process.html)
