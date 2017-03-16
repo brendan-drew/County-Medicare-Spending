@@ -139,39 +139,7 @@ In all four counties, the "shrinkage" effect of hierarchical modeling is clearly
 
 ## Feature Selection with the Hierarchical Model
 
-The hierarchical model described above is extremely simple, modeling spending per beneficiary as a function of time. The Medicare dataset also includes hundreds of variables on county-level beneficiary demographics and health services utilization rates. After some EDA exploring which variables correlated most closely, I built hierarchical linear models with 25 different combinations of variables. Model performance was evaluated based on DIC score and 2013/2014 model forecast error. Results of this analysis are shown in *Table 1*.
-
-|Features|DIC|Train RMSE|2013 RMSE|2014 RMSE|
-|---|---|---|---|---|---|
-|'year'|60436|$350|$723|$918|
-|'year', 'years_post_aca'|67210|$352|$526|$633|
-|*'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries'*|*72760*|*$368*|*$438*|*$512*|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'ffs_beneficiaries'|78212|$198|$423|$565|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'ma_participation_rate'|79068|$222|$389|$502|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'average_age'|79348|$241|$415|$529|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'percent_female'|80389|$222|$480|$642|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'percent_eligible_for_medicaid'|76759|$274|$423|$563|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'pac:_ltch_covered_stays_per_1000_beneficiaries'|79488|$216|$530|$646|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'pac:_irf_covered_stays_per_1000_beneficiaries'|78233|$206|$384|$523|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'pac:_snf_covered_stays_per_1000_beneficiaries'|78696|$212|$485|$555|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'pac:_hh_visits_per_1000_beneficiaries'|79015|$270|$432|$570|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'hospice_covered_stays_per_1000_beneficiaries'|79394|$225|$484|$626|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'op_visits_per_1000_beneficiaries'|80085|$363|$438|$519|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'fqhc/rhc_visits_per_1000_beneficiaries'|79423|$218|$438|$573|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', '%_of_beneficiaries_using_outpatient_dialysis_facility'|79419|$215|$446|$596|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'asc_events_per_1000_beneficiaries'|79381|$231|$442|$500|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'e&m_events_per_1000_beneficiaries'|79246|$212|$461|$536|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'imaging_events_per_1000_beneficiaries'|79519|$349|$436|$525|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'dme_events_per_1000_beneficiaries'|79977|$246|$563|$686|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'test_events_per_1000_beneficiaries'|79910|$241|$486|$557|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', '%_of_beneficiaries_using_part_b_drugs'|80791|$239|$472|$633|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'ambulance_events_per_1000_beneficiaries'|79665|$226|$504|$551|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'hospital_readmission_rate'|78510|$251|$430|$586|
-|'year', 'years_post_aca', 'ip_covered_stays_per_1000_beneficiaries', 'emergency_department_visits_per_1000_beneficiaries'|79303|$246|$415|$535|
-
-#### Table 1: Data used in hierarchical model feature selection
-
-The final model selected, for its simplicity and predictive power, included the features: year, years since Affordable Care Act implementation, and rate of inpatient hospitalizations per 1000 beneficiaries.
+The hierarchical model described above is extremely simple, modeling spending per beneficiary as a function of time. The Medicare dataset also includes hundreds of variables on county-level beneficiary demographics and health services utilization rates. After some EDA exploring which variables correlated most closely, I built hierarchical linear models with 25 different combinations of variables. Model performance was evaluated based on DIC score and 2013/2014 model forecast error. The final model selected, for its simplicity and predictive power, included the features: year, years since Affordable Care Act implementation, and rate of inpatient hospitalizations per 1000 beneficiaries.
 
 Those familiar with linear regression modeling will notice that this model violates one of the primary assumptions of linear regression: the absence of collinearity among the independent variables. "Year" and "years since Affordable Care Act implementation" are by definition collinear. The Affordable Care Act of 2010 and the Budget Control Act of 2011 both cut Medicare reimbursement rates, and across the U.S. a noticeable decline in the rate of increase in Medicare spending starting in 2010 was evident. As inclusion of this variable significantly improved the model's predictive power, a conscious decision was made to violate the rules of linear regression and include the variable. It should be noted that this decision introduces bias to both coefficients for "year" and "years", and they should be interpreted with caution.
 
