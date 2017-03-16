@@ -224,15 +224,15 @@ I can be reached by email at brendan.drew12@gmail.com.
 
 For additional information on the rationale/importance of forecasting Medicare spending, please refer to:
 
-* [NHE Fact Sheet (Centers for Medicare & Medicaid Services)] (https://www.cms.gov/research-statistics-data-and-systems/statistics-trends-and-reports/nationalhealthexpenddata/nhe-fact-sheet.html)
+* [NHE Fact Sheet (Centers for Medicare & Medicaid Services)](https://www.cms.gov/research-statistics-data-and-systems/statistics-trends-and-reports/nationalhealthexpenddata/nhe-fact-sheet.html)
 
 * [Medicare Spending Across the Map (Amy Hopson et al.)](http://www.ncpa.org/pdfs/st313.pdf)
 
 The methodology of my project draws heavily on the following sources:
 
-* [The Best Of Both Worlds: Hierarchical Linear Regression in PyMC3 (Danne Elbers, Thomas Wiecki)] (http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/)
+* [The Best Of Both Worlds: Hierarchical Linear Regression in PyMC3 (Danne Elbers, Thomas Wiecki)](http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/)
 
 * [Multilevel (Hierarchical) Modeling:
-What It Can and Cannot Do (Andrew Gelman)] (http://www.stat.columbia.edu/~gelman/research/published/multi2.pdf)
+What It Can and Cannot Do (Andrew Gelman)](http://www.stat.columbia.edu/~gelman/research/published/multi2.pdf)
 
 * [Gaussian Process Regression with SciKit Learn](http://scikit-learn.org/stable/modules/gaussian_process.html)
